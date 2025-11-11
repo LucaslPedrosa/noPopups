@@ -1,0 +1,16 @@
+{
+  "manifest_version": 3,
+  "name": "No Popups",
+  "version": "1.4.3",
+  "description": "Bloqueia novas abas/janelas abertas por scripts e links.",
+  "permissions": [
+    "scripting",
+    "storage"
+    ],
+  "host_permissions": ["<all_urls>"],
+  "background": { "service_worker": "background.js" },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": "nopopup.png"
+  }
+}
