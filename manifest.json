@@ -1,16 +1,44 @@
 {
   "manifest_version": 3,
   "name": "No Popups",
-  "version": "1.4.3",
+  "version": "1.4.6",
   "description": "Bloqueia novas abas/janelas abertas por scripts e links.",
   "permissions": [
-    "scripting",
     "storage"
-    ],
-  "host_permissions": ["<all_urls>"],
-  "background": { "service_worker": "background.js" },
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup.html",
     "default_icon": "nopopup.png"
-  }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "inpage.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_start",
+      "world": "MAIN",
+      "match_origin_as_fallback": true
+    },
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "all_frames": true,
+      "run_at": "document_start",
+      "match_origin_as_fallback": true
+    }
+  ]
 }
