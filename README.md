@@ -1,6 +1,6 @@
 # No Popups
 
-A small, no-dependency Chrome/Brave extension that blocks popups opened by scripts and links. Toggle it on/off from the toolbar popup and refresh the page after toggling. The popup shows a live counter of blocked attempts; extra logs appear in the DevTools console.
+A small, no-dependency Chrome/Brave extension that blocks popups opened by scripts and links. Pick a mode from the toolbar popup (changes apply immediately on open pages). The popup shows a live counter of blocked attempts; extra logs appear in the DevTools console.
 
 Works on most sites, runs at document start, and doesn’t phone home.
 
@@ -12,8 +12,7 @@ Many sites hijack user interactions to open new tabs or windows. No Popups takes
 
 ## Permissions
 
-- `scripting` — to register the content scripts at runtime
-- `storage` — to persist the ON/OFF state and the blocked attempts counter
+- `storage` — to persist the mode (off/normal/ultra) and the blocked attempts counter
 - `host_permissions: <all_urls>` — to allow running on every site
 
 The extension does not make network requests or send data to external services.
@@ -31,6 +30,12 @@ The extension does not make network requests or send data to external services.
 5) Open the popup and turn the switch ON.
 
 That’s it.
+
+## Modes
+
+- **Off**: does nothing.
+- **Normal**: blocks scripted popups and `target="_blank"`, but tries to respect intentional user actions (like ctrl/cmd-click) when possible.
+- **Ultra**: more aggressive; forces same-tab behavior more often and re-applies protections faster if a site fights back.
 
 ## FAQ
 

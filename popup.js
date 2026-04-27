@@ -1,22 +1,62 @@
 (async () => {
-  const result = await chrome.storage.local.get("popupAttemptCount");
-  const value = result.popupAttemptCount || 0;
-  const element = document.getElementById("block");
-  element.textContent = value;
+  const countEl = document.getElementById('block');
+  const modeSelect = document.getElementById('modeSelect');
+  const statusBadge = document.getElementById('statusBadge');
 
-  let checked = await chrome.storage.local.get("checked");
-  checked = checked.checked;
-  const checkbox = document.getElementById("checkbox");
+  const normalizeMode = (mode, checkedFallback) => {
+    if (mode === 'off' || mode === 'normal' || mode === 'ultra') return mode;
+    if (typeof checkedFallback === 'boolean') return checkedFallback ? 'normal' : 'off';
+    return 'normal';
+  };
 
-  if(checkbox.checked != checked){
-    checkbox.click();
-  }
+  const renderMode = (mode) => {
+    const isEnabled = mode !== 'off';
+    statusBadge.textContent = isEnabled ? mode.toUpperCase() : 'OFF';
+    statusBadge.classList.toggle('badge--on', isEnabled);
+    statusBadge.classList.toggle('badge--off', !isEnabled);
+  };
 
-  checkbox.addEventListener("change", () => {
-    checked = checkbox.checked;
-    chrome.storage.local.set({checked : checked});
+  const syncFromStorage = async () => {
+    const { popupAttemptCount = 0, mode, checked } = await chrome.storage.local.get([
+      'popupAttemptCount',
+      'mode',
+      'checked'
+    ]);
+
+    countEl.textContent = popupAttemptCount || 0;
+
+    const effectiveMode = normalizeMode(mode, checked);
+    modeSelect.value = effectiveMode;
+    renderMode(effectiveMode);
+  };
+
+  await syncFromStorage();
+
+  modeSelect.addEventListener('change', async () => {
+    const newMode = normalizeMode(modeSelect.value);
+    renderMode(newMode);
+    await chrome.storage.local.set({
+      mode: newMode,
+      // Back-compat for older code paths
+      checked: newMode !== 'off'
+    });
   });
-  const storage = await chrome.storage.local.get(null);
-  console.log(chrome.storage.local);
 
+  // Live update while popup is open.
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+
+    if (changes.popupAttemptCount) {
+      countEl.textContent = changes.popupAttemptCount.newValue || 0;
+    }
+
+    if (changes.mode || changes.checked) {
+      const effectiveMode = normalizeMode(
+        changes.mode?.newValue,
+        changes.checked?.newValue
+      );
+      modeSelect.value = effectiveMode;
+      renderMode(effectiveMode);
+    }
+  });
 })();

@@ -1,32 +1,50 @@
-async function register() {
-  try {
-    await chrome.scripting.unregisterContentScripts().catch(() => {});
-    
-    await chrome.scripting.registerContentScripts([
-      {
-        id: "nopopup-main",
-        js: ["inpage.js"],
-        matches: ["<all_urls>"],
-        runAt: "document_start",
-        allFrames: true,
-        world: "MAIN",
-        matchOriginAsFallback: true,
-        persistAcrossSessions: true,
-      },
-      {
-        id: "nopopup-content",
-        js: ["content.js"],
-        matches: ["<all_urls>"],
-        runAt: "document_start",
-        allFrames: true,
-        world: "ISOLATED", // This has access to Chrome APIs
-      }
-    ]);
-    console.log("[NoPopup] registrado");
-  } catch (e) {
-    console.error("[NoPopup] erro ao registrar:", e);
+async function ensureDefaults() {
+  const stored = await chrome.storage.local.get(['mode', 'checked', 'popupAttemptCount']);
+
+  const updates = {};
+
+  // New setting: mode = off | normal | ultra
+  if (stored.mode !== 'off' && stored.mode !== 'normal' && stored.mode !== 'ultra') {
+    if (typeof stored.checked === 'boolean') {
+      updates.mode = stored.checked ? 'normal' : 'off';
+    } else {
+      updates.mode = 'normal';
+    }
+  }
+
+  // Keep old boolean for compatibility with older versions / edge cases
+  const effectiveMode = updates.mode ?? stored.mode;
+  const shouldBeChecked = effectiveMode !== 'off';
+  if (typeof stored.checked !== 'boolean') updates.checked = shouldBeChecked;
+  else if (stored.checked !== shouldBeChecked) updates.checked = shouldBeChecked;
+
+  if (typeof stored.popupAttemptCount !== 'number') updates.popupAttemptCount = 0;
+
+  if (Object.keys(updates).length) {
+    await chrome.storage.local.set(updates);
   }
 }
 
-chrome.runtime.onInstalled.addListener(register);
-chrome.runtime.onStartup.addListener(register);
+chrome.runtime.onInstalled.addListener(() => {
+  ensureDefaults().catch(() => {});
+});
+
+chrome.runtime.onStartup.addListener(() => {
+  ensureDefaults().catch(() => {});
+});
+
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (!message || typeof message !== 'object') return;
+
+  if (message.type === 'INCREMENT_POPUP_COUNT') {
+    (async () => {
+      const result = await chrome.storage.local.get('popupAttemptCount');
+      const next = (result.popupAttemptCount || 0) + 1;
+      await chrome.storage.local.set({ popupAttemptCount: next });
+      sendResponse({ ok: true, value: next });
+    })().catch(() => sendResponse({ ok: false }));
+
+    // Keep the message channel open for async response
+    return true;
+  }
+});
